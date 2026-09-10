@@ -1,4 +1,5 @@
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using TpAzureFunctions.Models;
 
@@ -15,12 +16,20 @@ public class PublishMessage
 
     [Function("PublishMessage")]
     [QueueOutput("tp-messages", Connection = "AzureWebJobsStorage")]
-    public QueuePayload Run(
+    public async Task<QueuePayload> Run(
         [HttpTrigger(
             AuthorizationLevel.Anonymous,
             "post",
-            Route = "messages")] MessageRequest request)
+            Route = "messages")] HttpRequestData req)
     {
+        var request = await req.ReadFromJsonAsync<MessageRequest>();
+
+        if (request is null)
+        {
+            throw new InvalidOperationException(
+                "Le body JSON de la requête est vide ou invalide.");
+        }
+
         _logger.LogInformation(
             "Requête HTTP reçue pour {Name}",
             request.Name);
